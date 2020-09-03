@@ -11,6 +11,7 @@ using Microsoft.WindowsAzure.Storage;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
+using Microsoft.Build.Utilities;
 
 namespace TimerFunction
 {
@@ -29,10 +30,7 @@ namespace TimerFunction
             var copyTo = "bkp";
             var accountName = "alurahenriquestorage";
             var accountKey = "HZ+/nSCY8gtf4Hb5fZFYcgRDGHzuidoennov788vfPkYxDtxBVptRjU2JEtM7Smr8As21FVxY+Eba/o+SEryQg==";
-            TransferBlob(accountName, accountKey, copyFrom, copyTo);
-
-            Console.WriteLine("Copiando arquivos 8==============================================D");
-            
+            TransferBlob(accountName, accountKey, copyFrom, copyTo);            
         }
 
         static async void TransferBlob(string accountName, string accountKey, string sourceContainerName, string targetContainerName)
@@ -42,7 +40,7 @@ namespace TimerFunction
             CloudBlobContainer targetContainer = cloudBlobClient.GetContainerReference(targetContainerName);
             if (await CheckContainers(sourceContainer, targetContainer))
             {
-                await NewMethod(sourceContainer, targetContainer);
+                await IterateBlobs(sourceContainer, targetContainer, CopyBlob);
             }
         }
 
@@ -51,11 +49,13 @@ namespace TimerFunction
             return await sourceContainer.ExistsAsync() && await targetContainer.ExistsAsync();
         }
 
-        private static async System.Threading.Tasks.Task NewMethod(CloudBlobContainer sourceContainer, CloudBlobContainer targetContainer)
+        private static async System.Threading.Tasks.Task IterateBlobs(CloudBlobContainer sourceContainer, 
+            CloudBlobContainer targetContainer, 
+            Func<CloudBlobContainer, CloudBlobContainer, IListBlobItem, System.Threading.Tasks.Task> method)
         {
             foreach (IListBlobItem item in (await sourceContainer.ListBlobsSegmentedAsync(null)).Results)
             {
-                await CopyBlob(sourceContainer, targetContainer, item);
+                await method(sourceContainer, targetContainer, item);
             }
         }
 
